@@ -41,6 +41,13 @@ export const definitions: DefinitionWithExtend[] = [
         extend: [philips.m.light({colorTemp: {range: [153, 500]}, color: {modes: ["xy", "hs"], enhancedHue: true}})],
     },
     {
+        zigbeeModel: ["929003736501_01", "929003736501_02"],
+        model: "929003736501",
+        vendor: "Philips",
+        description: "Hue Datura LED ceiling panel large round",
+        extend: [philips.m.light({colorTemp: {range: [153, 500]}, color: {modes: ["xy", "hs"], enhancedHue: true}})],
+    },
+    {
         zigbeeModel: ["929003810901_01", "929003810901_02", "929003810901_03"],
         model: "929003810901",
         vendor: "Philips",
@@ -134,6 +141,13 @@ export const definitions: DefinitionWithExtend[] = [
         vendor: "Philips",
         description: "Hue white ambiance",
         extend: [philips.m.light({colorTemp: {range: [222, 454]}})],
+    },
+    {
+        zigbeeModel: ["LTA019"],
+        model: "929003853901",
+        vendor: "Philips",
+        description: "Hue white ambiance and color E26",
+        extend: [philips.m.light({colorTemp: {range: [50, 1000]}})],
     },
     {
         zigbeeModel: ["LCA012"],
