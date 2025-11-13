@@ -343,58 +343,7 @@ export const boschGeneralEnergyDeviceExtend = {
 //endregion
 
 //region Generally used Bosch functionality on sensor devices
-interface BoschGeneralSensorDeviceIasZoneCluster {
-    attributes: {
-        /** ID: 36609 | Type: UINT8 | Only used on BSD-2 with default value 0 */
-        unknownAttribute1: number;
-        /** ID: 36614 | Type: UINT8 | Only used on BSD-2 with default value 0 */
-        unknownAttribute2: number;
-    };
-    commands: {
-        /** ID: 2 */
-        initiateTestMode: {
-            /** Type: UINT8 */
-            testModeDuration: number;
-            /** Type: ENUM8 | Known values are 0x80 (BSEN-M) and 0x00 (BSEN-W / BSD-2) */
-            currentZoneSensitivityLevel: number;
-        };
-        /** ID: 128 | Only used on BSD-2 */
-        alarmControl: {
-            /** Type: ENUM8 */
-            alarmMode: number;
-            /** Type: UINT8 */
-            alarmTimeout: number;
-        };
-    };
-    commandResponses: never;
-}
-
 export const boschGeneralSensorDeviceExtend = {
-    customIasZoneCluster: () =>
-        m.deviceAddCustomCluster("ssIasZone", {
-            ID: Zcl.Clusters.ssIasZone.ID,
-            attributes: {
-                unknownAttribute1: {ID: 0x8f01, type: Zcl.DataType.UINT8, manufacturerCode: manufacturerOptions.manufacturerCode},
-                unknownAttribute2: {ID: 0x8f06, type: Zcl.DataType.UINT8, manufacturerCode: manufacturerOptions.manufacturerCode},
-            },
-            commands: {
-                initiateTestMode: {
-                    ID: 0x02,
-                    parameters: [
-                        {name: "testModeDuration", type: Zcl.DataType.UINT8},
-                        {name: "currentZoneSensitivityLevel", type: Zcl.DataType.ENUM8},
-                    ],
-                },
-                alarmControl: {
-                    ID: 0x80,
-                    parameters: [
-                        {name: "alarmMode", type: Zcl.DataType.ENUM8},
-                        {name: "alarmTimeout", type: Zcl.DataType.UINT8},
-                    ],
-                },
-            },
-            commandsResponse: {},
-        }),
     testMode: (args: {
         testModeDescription: string;
         sensitivityLevelToUse: number;
@@ -410,7 +359,7 @@ export const boschGeneralSensorDeviceExtend = {
         };
 
         const enableTestMode = async (endpoint: Zh.Endpoint | Zh.Group, sensitivityLevelToUse: number, timeoutInSeconds: number) => {
-            await endpoint.command<"ssIasZone", "initiateTestMode", BoschGeneralSensorDeviceIasZoneCluster>("ssIasZone", "initiateTestMode", {
+            await endpoint.command("ssIasZone", "initTestMode", {
                 testModeDuration: timeoutInSeconds,
                 currentZoneSensitivityLevel: sensitivityLevelToUse,
             });
@@ -2715,7 +2664,44 @@ export const boschWaterAlarmExtend = {
 //endregion
 
 //region Bosch BSD-2 (Smoke alarm II)
+interface BoschSmokeAlarmIasZoneCluster {
+    attributes: {
+        /** ID: 36609 | Type: UINT8 | Used with default value 0 */
+        unknownAttribute1: number;
+        /** ID: 36614 | Type: UINT8 | Used with default value 0 */
+        unknownAttribute2: number;
+    };
+    commands: {
+        /** ID: 128 */
+        alarmControl: {
+            /** Type: ENUM8 */
+            alarmMode: number;
+            /** Type: UINT8 */
+            alarmTimeout: number;
+        };
+    };
+    commandResponses: never;
+}
+
 export const boschSmokeAlarmExtend = {
+    customIasZoneCluster: () =>
+        m.deviceAddCustomCluster("ssIasZone", {
+            ID: Zcl.Clusters.ssIasZone.ID,
+            attributes: {
+                unknownAttribute1: {ID: 0x8f01, type: Zcl.DataType.UINT8, manufacturerCode: manufacturerOptions.manufacturerCode},
+                unknownAttribute2: {ID: 0x8f06, type: Zcl.DataType.UINT8, manufacturerCode: manufacturerOptions.manufacturerCode},
+            },
+            commands: {
+                alarmControl: {
+                    ID: 0x80,
+                    parameters: [
+                        {name: "alarmMode", type: Zcl.DataType.ENUM8},
+                        {name: "alarmTimeout", type: Zcl.DataType.UINT8},
+                    ],
+                },
+            },
+            commandsResponse: {},
+        }),
     /** In previous implementations, the user was able to change the
      * sensitivity level of the smoke detector. That is not supported
      * when using the Bosch Smart Home Controller II. As the previous
@@ -2799,7 +2785,7 @@ export const boschSmokeAlarmExtend = {
                 // Bosch sends broadcast messages two times with 4 seconds in between to
                 // ensure all sleepy devices receive them. We mimic the same pattern here.
                 for (let index = 0; index < 2; index++) {
-                    await endpoint.zclCommandBroadcast<"ssIasZone", "alarmControl", BoschGeneralSensorDeviceIasZoneCluster>(
+                    await endpoint.zclCommandBroadcast<"ssIasZone", "alarmControl", BoschSmokeAlarmIasZoneCluster>(
                         255,
                         ZSpec.BroadcastAddress.SLEEPY,
                         "ssIasZone",
@@ -2811,7 +2797,7 @@ export const boschSmokeAlarmExtend = {
                     await sleep(4000);
                 }
             } else {
-                await endpoint.command<"ssIasZone", "alarmControl", BoschGeneralSensorDeviceIasZoneCluster>(
+                await endpoint.command<"ssIasZone", "alarmControl", BoschSmokeAlarmIasZoneCluster>(
                     "ssIasZone",
                     "alarmControl",
                     {alarmMode: alarmMode, alarmTimeout: timeoutInSeconds},
@@ -3414,7 +3400,7 @@ export const boschThermostatExtend = {
                     occupiedHeatingSetpoint: {min: 5, max: 30, step: 0.5},
                     occupiedCoolingSetpoint: {min: 5, max: 30, step: 0.5},
                 },
-                configure: {reporting: false},
+                configure: {reporting: {min: "10_SECONDS", max: "MAX", change: 50}},
             },
             systemMode: {
                 values: ["heat", "cool"],
@@ -3423,7 +3409,7 @@ export const boschThermostatExtend = {
             },
             runningState: {
                 values: ["idle", "heat", "cool"],
-                configure: {reporting: false},
+                configure: {reporting: {min: "MIN", max: "MAX", change: null}},
             },
         });
 
@@ -3555,7 +3541,7 @@ export const boschThermostatExtend = {
                     occupiedHeatingSetpoint: {min: 5, max: 30, step: 0.5},
                 },
                 configure: {
-                    reporting: {min: "MIN", max: "MAX", change: 1},
+                    reporting: {min: "10_SECONDS", max: "MAX", change: 50},
                 },
             },
             systemMode: {
